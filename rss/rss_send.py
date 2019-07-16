@@ -19,8 +19,9 @@ from utils.utils import un_healthy, healthy
 
 def check_connection():
     try:
-        updates = bot.get_updates()
-    except:
+        bot.get_updates()
+    except Exception as e:
+        print(e)
         un_healthy()
 
 
@@ -53,7 +54,7 @@ class BatchProcess(threading.Thread):
 
     def update_feed(self, rss):
         healthy()
-        if rss.is_active:  # is_active
+        if rss.is_active:
             try:
                 feed = feedparser.parse(rss.rss_url)
                 entries = feed.entries
@@ -64,9 +65,7 @@ class BatchProcess(threading.Thread):
                 traceback.print_exc()
                 print(e)
                 un_healthy()
-                # message = "مشکلی در پردازش rss شما پیش آمده است!"
                 de_active_channel(rss)
-                # self.bot.send_message(chat_id=rss.admin_chat_id, text=message, parse_mode=ParseMode.HTML)
 
     def send_newest_messages(self, rss, post):
         post_int_date = utc_to_int(post.published)
@@ -75,16 +74,18 @@ class BatchProcess(threading.Thread):
         rss = get_rss_by_id(rss.id)
         if post_int_date > rss.last_updated:
             link = unquote(post.link)
-            message = "*" + post.title + "*\n\n" + link
+            message = str("*" + post.title + "*\n\n" + link)
             try:
-                self.bot.send_message(chat_id=rss.channel_chat_id, text=message)
+                chat_id = rss.channel_chat_id
+                self.bot.send_message(chat_id=chat_id, text=message)
                 time.sleep(0.5)
                 update_last_check(rss=rss, last_updated=post_int_date)
             except Unauthorized:
                 de_active_channel(rss=rss)
             except TelegramError:
                 pass
-            except:
+            except Exception as e:
+                print(e)
                 un_healthy()
 
     def set_running(self, running):

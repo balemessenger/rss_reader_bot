@@ -13,7 +13,7 @@ services:
       - /home/docker/volumes/pg_rss_reade1r/postgres/:/var/lib/postgresql/data/
 
   rss_reader:
-    image: docker.bale.ai/money/rss_reader:0.9-11
+    image: docker.bale.ai/money/rss_reader:0.10-12
     container_name: rss_reader
     environment:
       #   PostgreSQL Config
