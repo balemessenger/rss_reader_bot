@@ -1,0 +1,40 @@
+version: '3.0'
+services:
+  pg_rss_reader:
+    image: docker.bale.ai/money/balepostgres:1.6.0
+    container_name: pg_rss_reader
+    restart: always
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres123456
+      - POSTGRES_DB=my_db
+      - TZ=Asia/Tehran
+    volumes:
+      - /home/docker/volumes/pg_rss_reader/postgres/:/var/lib/postgresql/data/
+
+  rss_reader:
+    image: docker.bale.ai/money/rss_reader:0.2-2
+    container_name: rss_reader
+    environment:
+      #   PostgreSQL Config
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres123456
+      - POSTGRES_DB=my_db
+      - POSTGRES_HOST=pg_rss_reader
+      - POSTGRES_PORT=5432
+      #   Config
+      - BASE_URL=https://tapi.bale.ai/
+      - BASE_FILE_URL=https://tapi.bale.ai/file/
+      - TOKEN=2063839091:6fcac9a53e5a7cbcd7e2c71abfcdba3d4c5ece88
+      - RSS_INTERVAL=5
+      #   Log config
+      - USE_GRAYLOG=0
+      - SOURCE=rss_reader_customer_source_bot
+      - GRAYLOG_HOST=127.0.0.1
+      - GRAYLOG_PORT=12201
+      - LOG_LEVEL=10
+      - LOG_FACILITY_NAME=rss_reader_bot_facility
+      - MONITORING_HASH=cabb3f498ac5a037f669f658f1be08c3
+    restart: always # use always
+    depends_on:
+      - pg_rss_reader
