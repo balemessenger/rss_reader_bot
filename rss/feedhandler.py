@@ -18,7 +18,6 @@ class FeedHandler(object):
         else:
             feed = feedparser.parse(url)
             if feed.entries:
-                # print(feed.entries[:BotConfig.rss_count][0])
                 return feed.entries[:BotConfig.rss_count]
             return None
 
