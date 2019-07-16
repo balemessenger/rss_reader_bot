@@ -1,6 +1,7 @@
 import logging
 from DB.models.base import Base, engine, Session
 from DB.models.rss import RSS
+from utils.utils import un_healthy
 
 Base.metadata.create_all(engine)
 session = Session()
@@ -15,6 +16,7 @@ def db_persist(func):
         except Exception as e:
             logger.error(e)
             session.rollback()
+            un_healthy()
             return None
 
     return persist
@@ -46,6 +48,10 @@ def get_all_rss():
 
 def get_rss_by_admin_chat_id(admin_chat_id):
     return session.query(RSS).filter(RSS.admin_chat_id == str(admin_chat_id)).all()
+
+
+def get_rss_by_id(rss_id):
+    return session.query(RSS).filter(RSS.id == rss_id).one_or_none()
 
 
 def get_last_updated_rss():

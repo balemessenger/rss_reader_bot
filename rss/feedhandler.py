@@ -1,6 +1,8 @@
 import feedparser
 import re
 
+from main_config import BotConfig
+
 
 class FeedHandler(object):
 
@@ -16,7 +18,8 @@ class FeedHandler(object):
         else:
             feed = feedparser.parse(url)
             if feed.entries:
-                return feed.entries[:4]
+                # print(feed.entries[:BotConfig.rss_count][0])
+                return feed.entries[:BotConfig.rss_count]
             return None
 
     @staticmethod

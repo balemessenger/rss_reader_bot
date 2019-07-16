@@ -1,28 +1,42 @@
 # /bin/bash/python/
+import asyncio
 import time
 from urllib.parse import unquote
+
+import feedparser
 from telegram.error import (TelegramError, Unauthorized)
-from telegram import ParseMode
-from multiprocessing.dummy import Pool as ThreadPool
 from threading import Thread as RunningThread
-import datetime
 import threading
 import traceback
 from time import sleep
+from dateutil import parser
 
-from DB.db_handler import get_all_rss, update_last_check, de_active_channel
+from DB.db_handler import get_all_rss, update_last_check, de_active_channel, get_rss_by_id
 from main_config import BotConfig
-from rss.datehandler import DateHandler
-from rss.feedhandler import FeedHandler
+from rss.objects import bot
+from utils.utils import un_healthy, healthy
+
+
+def check_connection():
+    try:
+        updates = bot.get_updates()
+    except:
+        un_healthy()
+
+
+def utc_to_int(utc_date):
+    dt = parser.parse(utc_date)
+    return int(dt.strftime("%Y%m%d%H%M%S"))
 
 
 class BatchProcess(threading.Thread):
 
     def __init__(self, bot):
         RunningThread.__init__(self)
-        self.update_interval = float(BotConfig.rss_interval)
+        self.rss_interval = BotConfig.rss_interval
         self.bot = bot
         self.running = True
+        self.loop = asyncio.get_event_loop()
 
     def run(self):
         """
@@ -30,63 +44,48 @@ class BatchProcess(threading.Thread):
         """
 
         while self.running:
-            # Init workload queue, add queue to ThreadPool
             rss_queue = get_all_rss()
-            self.parse_parallel(rss_queue=rss_queue, threads=4)
-
-            # Sleep for interval
-            sleep(self.update_interval)
-
-    def parse_parallel(self, rss_queue, threads):
-        time_started = datetime.datetime.now()
-
-        pool = ThreadPool(threads)
-        pool.map(self.update_feed, rss_queue)
-        pool.close()
-        pool.join()
-
-        time_ended = datetime.datetime.now()
-        duration = time_ended - time_started
-        print("Finished updating! Parsed " + str(len(rss_queue)) +
-              " rss feeds in " + str(duration) + " !")
+            for rss in rss_queue:
+                self.update_feed(rss)
+            print("Finished updating! Parsed " + str(len(rss_queue)) + " rss feeds")
+            check_connection()
+            sleep(self.rss_interval)
 
     def update_feed(self, rss):
+        healthy()
         if rss.is_active:  # is_active
             try:
-                for post in reversed(FeedHandler.parse_feed(rss.rss_url)):
+                feed = feedparser.parse(rss.rss_url)
+                entries = feed.entries
+                entries = entries[::-1]
+                for post in entries:
                     self.send_newest_messages(rss=rss, post=post)
             except Exception as e:
                 traceback.print_exc()
                 print(e)
+                un_healthy()
                 # message = "مشکلی در پردازش rss شما پیش آمده است!"
                 de_active_channel(rss)
                 # self.bot.send_message(chat_id=rss.admin_chat_id, text=message, parse_mode=ParseMode.HTML)
 
     def send_newest_messages(self, rss, post):
-        print(post.title)
-        post_update_date = DateHandler.parse_datetime(datetime=post.updated)
-        post_update_date_timestamp = post_update_date.timestamp()
-        url_update_date_timestamp = rss.last_updated
-
-        print("====>", post_update_date_timestamp, type(post_update_date), " > ", url_update_date_timestamp,
-              type(url_update_date_timestamp))
-        print("2 ====>", post_update_date_timestamp > url_update_date_timestamp)
-
-        if post_update_date_timestamp > url_update_date_timestamp:
-            print("3 ====>", "reach")
+        post_int_date = utc_to_int(post.published)
+        if rss.last_updated is None:
+            update_last_check(rss=rss, last_updated=post_int_date)
+        rss = get_rss_by_id(rss.id)
+        if post_int_date > rss.last_updated:
             link = unquote(post.link)
             message = "*" + post.title + "*\n\n" + link
             try:
-                print("4 ====>", "send message to ", rss.channel_chat_id, message)
                 self.bot.send_message(chat_id=rss.channel_chat_id, text=message)
                 time.sleep(0.5)
-                print("5 ====>", "sent")
-                update_last_check(rss=rss, last_updated=post_update_date_timestamp)
-
+                update_last_check(rss=rss, last_updated=post_int_date)
             except Unauthorized:
                 de_active_channel(rss=rss)
             except TelegramError:
                 pass
+            except:
+                un_healthy()
 
     def set_running(self, running):
         self.running = running

@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 import logging
 import re
+from datetime import datetime, timedelta
 
 from telegram import ReplyKeyboardMarkup
 from telegram.ext import *
@@ -56,8 +57,8 @@ def get_rss_and_add_it(bot, update, user_data):
     admin = update.message.from_user
     channel_user_name = user_data["channel_user_name"]
     channel_chat_id = user_data["channel_chat_id"]
-    rss = RSS(channel_chat_id, channel_user_name, admin_chat_id=admin.id,
-              admin_user_name=admin.username, rss_url=rss_url, last_updated=float(0))
+    rss = RSS(channel_chat_id, channel_user_name, admin_chat_id=admin.id, admin_user_name=admin.username,
+              rss_url=rss_url)
     add_rss(rss)
     update.message.reply_text(BotMessage.rss_added_successfully)
     start(bot, update)

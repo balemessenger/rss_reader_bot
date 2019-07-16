@@ -2,9 +2,15 @@ import os
 
 
 class BotConfig:
+    redis_host = os.getenv('REDIS_HOST', "localhost")
+    redis_port = int(os.getenv('REDIS_PORT', 6379))
+    redis_db = os.getenv('REDIS_DB', 0)
+    connection_pool_size = int(os.environ.get('CONN_POOL', 50))
+    heathens_path = os.path.dirname(os.path.abspath(__file__))+"/aliveness"
     poll_interval = float(os.environ.get('POLL_INTERVAL', 0.5))
-    rss_interval = int(os.environ.get('RSS_INTERVAL', 5))
-    token = os.environ.get('TOKEN', "2063839091:6fcac9a53e5a7cbcd7e2c71abfcdba3d4c5ece88")
+    rss_count = int(os.environ.get('RSS_COUNT', 4))
+    rss_interval = float(os.environ.get('RSS_INTERVAL', 5))
+    token = os.environ.get('TOKEN', "token")
     base_file_url = os.environ.get('BASE_FILE_URL', "https://tapi.bale.ai/file/")
     base_url = os.environ.get('BASE_URL', "https://tapi.bale.ai/")
 
